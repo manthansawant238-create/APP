@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { ChannelProfile, ScriptFramework, Tone, YouTubeScript } from '../types';
 import { FRAMEWORKS, TONES } from '../constants';
@@ -18,7 +17,7 @@ export default function GeneratorModal({ profiles, tier, onClose, onSubmit }: Ge
 
   // Form State
   const [topic, setTopic] = useState('');
-  const [selectedProfile, setSelectedProfile] = useState(profiles[0]);
+  const [selectedProfileId, setSelectedProfileId] = useState(profiles[0]?.id || '');
   const [framework, setFramework] = useState(ScriptFramework.Documentary);
   const [tone, setTone] = useState(Tone.Dramatic);
   
@@ -27,6 +26,9 @@ export default function GeneratorModal({ profiles, tier, onClose, onSubmit }: Ge
   const [hooks, setHooks] = useState<string[]>([]);
   const [selectedHookIndex, setSelectedHookIndex] = useState(0);
 
+  // Derived
+  const selectedProfile = profiles.find(p => p.id === selectedProfileId) || profiles[0];
+
   const isProFramework = (f: string) => {
     return [ScriptFramework.ViralShortLong, ScriptFramework.CaseStudy].includes(f as any);
   };
@@ -34,6 +36,8 @@ export default function GeneratorModal({ profiles, tier, onClose, onSubmit }: Ge
   const handleNext = async () => {
     if (step === 1) {
       if (!topic.trim()) return setError('Please enter a topic');
+      if (!selectedProfile) return setError('Please create a channel profile first');
+      
       setLoading(true);
       setError(null);
       try {
@@ -41,8 +45,9 @@ export default function GeneratorModal({ profiles, tier, onClose, onSubmit }: Ge
         setResearch(data.research);
         setHooks(data.hooks);
         setStep(2);
-      } catch (e) {
-        setError('Failed to research topic. Please try again.');
+      } catch (e: any) {
+        console.debug("Research generation error handled:", e.message);
+        setError(e.message || 'Failed to research topic. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -78,8 +83,9 @@ export default function GeneratorModal({ profiles, tier, onClose, onSubmit }: Ge
           }))
         };
         onSubmit(newScript);
-      } catch (e) {
-        setError('Failed to generate script. Please try again.');
+      } catch (e: any) {
+        console.debug("Script generation error handled:", e.message);
+        setError(e.message || 'Failed to generate script. Please try again.');
       } finally {
         setLoading(false);
       }
@@ -131,8 +137,8 @@ export default function GeneratorModal({ profiles, tier, onClose, onSubmit }: Ge
                   <label className="block text-[10px] font-black text-[#9AA3B2] uppercase tracking-[0.2em] mb-2">Channel Context</label>
                   <select 
                     className="w-full px-5 py-4 rounded-2xl bg-[#0E1116] border border-[#1F262F] text-[#EAEAF0] outline-none focus:ring-2 focus:ring-[#FF6A3D] text-sm font-bold appearance-none"
-                    value={selectedProfile.id}
-                    onChange={(e) => setSelectedProfile(profiles.find(p => p.id === e.target.value)!)}
+                    value={selectedProfileId}
+                    onChange={(e) => setSelectedProfileId(e.target.value)}
                   >
                     {profiles.map(p => <option key={p.id} value={p.id}>{p.name}</option>)}
                   </select>

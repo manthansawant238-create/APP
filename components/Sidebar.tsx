@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { ICONS } from '../constants';
 
@@ -31,10 +30,21 @@ export default function Sidebar({ currentView, onViewChange, credits, tier }: Si
     agency: 999
   };
 
-  const currentLimit = limits[tier];
-  const usedCredits = tier === 'agency' ? 0 : currentLimit - credits;
-  const progressPercent = tier === 'agency' ? 100 : Math.min(100, (credits / currentLimit) * 100);
+  const currentLimit = limits[tier] || 5;
+  // Ensure credits is a number and non-negative
+  const safeCredits = typeof credits === 'number' && !isNaN(credits) ? Math.max(0, credits) : 0;
   
+  // Calculate percentage: (credits / limit) * 100
+  // If agency (unlimited), show 100%
+  // Clamp between 0 and 100 to prevent overflow
+  let progressPercent = 0;
+  if (tier === 'agency') {
+    progressPercent = 100;
+  } else {
+    const rawPercent = (safeCredits / currentLimit) * 100;
+    progressPercent = Math.min(100, Math.max(0, isNaN(rawPercent) ? 0 : rawPercent));
+  }
+
   const getNextTierInfo = () => {
     if (tier === 'free') return { name: 'Creator', perk: '50 Scripts & Research' };
     if (tier === 'creator') return { name: 'Agency', perk: 'Unlimited Everything' };
@@ -44,7 +54,7 @@ export default function Sidebar({ currentView, onViewChange, credits, tier }: Si
   const nextTier = getNextTierInfo();
 
   return (
-    <aside className="w-64 bg-[#151A22] border-r border-[#1F262F] flex flex-col h-screen sticky top-0 shadow-xl">
+    <aside className="w-64 bg-[#151A22] border-r border-[#1F262F] flex flex-col h-screen sticky top-0 shadow-xl shrink-0">
       <div className="p-6">
         <div className="flex items-center space-x-2 mb-10 group cursor-pointer" onClick={() => onViewChange('dashboard')}>
           <div className="w-8 h-8 bg-[#FF6A3D] rounded-lg flex items-center justify-center shadow-lg shadow-[#FF6A3D]/30 group-hover:scale-110 transition-transform">
@@ -62,49 +72,56 @@ export default function Sidebar({ currentView, onViewChange, credits, tier }: Si
 
       <div className="mt-auto p-6 space-y-6">
         {/* Plan Status Card */}
-        <div className="bg-[#1F262F] p-4 rounded-2xl border border-[#2D3643] shadow-inner">
-          <div className="flex items-center justify-between mb-3">
-            <div className="flex flex-col">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#9AA3B2] mb-0.5">Current Plan</span>
-              <span className={`text-sm font-bold capitalize ${tier === 'agency' ? 'text-[#C77DFF]' : 'text-[#EAEAF0]'}`}>
-                {tier}
-              </span>
-            </div>
-            <div className="text-right">
-              <span className="text-[10px] font-black uppercase tracking-widest text-[#9AA3B2] mb-0.5 block">Credits</span>
-              <span className="text-sm font-bold text-[#FF6A3D]">
-                {tier === 'agency' ? '∞' : credits}
-              </span>
-            </div>
-          </div>
-
-          <div className="w-full bg-[#0E1116] rounded-full h-2 mb-4 overflow-hidden">
-            <div 
-              className={`h-full rounded-full transition-all duration-1000 ease-out ${tier === 'agency' ? 'bg-[#C77DFF]' : 'bg-[#FF6A3D]'}`} 
-              style={{ width: `${progressPercent}%` }}
-            ></div>
-          </div>
-
-          {nextTier ? (
-            <div className="pt-3 border-t border-[#2D3643]">
-              <p className="text-[9px] font-black uppercase tracking-widest text-[#9AA3B2] mb-2">
-                Unlock {nextTier.name}
-              </p>
-              <div className="flex items-center justify-between bg-[#0E1116]/40 p-2 rounded-lg border border-white/5 group cursor-pointer hover:border-[#FF6A3D]/30 transition-colors" onClick={() => onViewChange('pricing')}>
-                <span className="text-[10px] text-[#EAEAF0]/70 truncate max-w-[120px]">
-                  {nextTier.perk}
+        <div className="bg-[#1F262F] p-4 rounded-2xl border border-[#2D3643] shadow-inner relative overflow-hidden">
+          <div className="relative z-10">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex flex-col">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#9AA3B2] mb-0.5">Current Plan</span>
+                <span className={`text-sm font-bold capitalize ${tier === 'agency' ? 'text-[#C77DFF]' : 'text-[#EAEAF0]'}`}>
+                  {tier}
                 </span>
-                <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-[#FF6A3D] group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
-                </svg>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-black uppercase tracking-widest text-[#9AA3B2] mb-0.5 block">Credits</span>
+                <span className="text-sm font-bold text-[#FF6A3D]">
+                  {tier === 'agency' ? '∞' : safeCredits} left
+                </span>
               </div>
             </div>
-          ) : (
-            <div className="pt-2 flex items-center space-x-2">
-               <div className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse"></div>
-               <span className="text-[10px] font-bold text-[#4ADE80] uppercase tracking-widest">Maximum Power Unlocked</span>
+
+            {/* Progress Bar Track */}
+            <div className="w-full bg-[#0E1116] rounded-full h-2 mb-4 overflow-hidden relative isolate">
+              {/* Progress Bar Fill */}
+              <div 
+                className={`h-full rounded-full transition-all duration-1000 ease-out max-w-full ${tier === 'agency' ? 'bg-[#C77DFF]' : 'bg-[#FF6A3D]'}`} 
+                style={{ width: `${progressPercent}%` }}
+              ></div>
             </div>
-          )}
+
+            {nextTier ? (
+              <div className="pt-3 border-t border-[#2D3643]">
+                <p className="text-[9px] font-black uppercase tracking-widest text-[#9AA3B2] mb-2">
+                  Unlock {nextTier.name}
+                </p>
+                <button 
+                  className="w-full flex items-center justify-between bg-[#0E1116]/40 p-2 rounded-lg border border-white/5 group cursor-pointer hover:border-[#FF6A3D]/30 transition-colors text-left" 
+                  onClick={() => onViewChange('pricing')}
+                >
+                  <span className="text-[10px] text-[#EAEAF0]/70 truncate max-w-[120px]">
+                    {nextTier.perk}
+                  </span>
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-3 w-3 text-[#FF6A3D] group-hover:translate-x-0.5 transition-transform" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M9 5l7 7-7 7" />
+                  </svg>
+                </button>
+              </div>
+            ) : (
+              <div className="pt-2 flex items-center space-x-2">
+                 <div className="w-1.5 h-1.5 rounded-full bg-[#4ADE80] animate-pulse"></div>
+                 <span className="text-[10px] font-bold text-[#4ADE80] uppercase tracking-widest">Maximum Power Unlocked</span>
+              </div>
+            )}
+          </div>
         </div>
         
         {/* User Profile Area */}

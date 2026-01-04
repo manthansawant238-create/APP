@@ -1,8 +1,6 @@
-
 import React, { useState } from 'react';
 import { YouTubeScript, ScriptSection } from '../types';
 import { regenerateSection } from '../services/gemini';
-// Import ICONS from constants to fix the "Cannot find name 'ICONS'" error
 import { ICONS } from '../constants';
 
 interface ScriptEditorProps {
@@ -17,11 +15,12 @@ export default function ScriptEditor({ script, tier, onUpdate, onBack }: ScriptE
   const [isRegenerating, setIsRegenerating] = useState(false);
   const [instruction, setInstruction] = useState('');
   const [isCopied, setIsCopied] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const activeSection = script.sections.find(s => s.id === activeSectionId);
 
   const getWordCount = (text: string) => {
-    return text.trim().split(/\s+/).filter(Boolean).length;
+    return (text || '').trim().split(/\s+/).filter(Boolean).length;
   };
 
   const handleUpdateContent = (content: string) => {
@@ -38,12 +37,14 @@ export default function ScriptEditor({ script, tier, onUpdate, onBack }: ScriptE
     }
     if (!activeSection || !instruction.trim()) return;
     setIsRegenerating(true);
+    setError(null);
     try {
       const newContent = await regenerateSection(activeSection.content, instruction, script.tone);
       handleUpdateContent(newContent);
       setInstruction('');
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      console.warn("Regeneration error handled:", e.message);
+      setError(e.message || 'Failed to regenerate. Please try again.');
     } finally {
       setIsRegenerating(false);
     }
@@ -128,7 +129,7 @@ export default function ScriptEditor({ script, tier, onUpdate, onBack }: ScriptE
               
               <div className="flex-1 p-6 md:p-8 overflow-y-auto min-h-[40vh] md:min-h-0 bg-gradient-to-b from-[#151A22] to-[#0E1116]/30">
                 <textarea
-                  value={activeSection.content}
+                  value={activeSection.content || ''}
                   onChange={(e) => handleUpdateContent(e.target.value)}
                   className="w-full h-full text-base md:text-lg leading-[1.8] text-[#EAEAF0] bg-transparent outline-none resize-none font-medium placeholder-[#9AA3B2]/10"
                   placeholder="The script continues here..."
@@ -137,6 +138,11 @@ export default function ScriptEditor({ script, tier, onUpdate, onBack }: ScriptE
 
               {/* AI Quick Edit Bar */}
               <div className="p-4 md:p-6 bg-[#0E1116] border-t border-[#1F262F]">
+                {error && (
+                   <div className="mb-3 text-red-400 text-xs font-bold uppercase tracking-widest bg-red-900/10 p-2 rounded border border-red-500/20 text-center animate-pulse">
+                     {error}
+                   </div>
+                )}
                 <div className="flex flex-col sm:flex-row sm:items-center gap-3 bg-[#151A22] p-2 rounded-2xl border border-[#1F262F] shadow-2xl">
                   <div className="relative flex-1 flex items-center">
                     <input 

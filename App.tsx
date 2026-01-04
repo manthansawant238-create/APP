@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect } from 'react';
 import { UserState, YouTubeScript, ChannelProfile, Tone, ScriptFramework } from './types';
 import Dashboard from './components/Dashboard';
@@ -35,15 +34,23 @@ export default function App() {
     const saved = localStorage.getItem('scriptarc_user');
     if (saved) {
       try {
-        setUser(JSON.parse(saved));
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object') {
+          setUser(parsed);
+        }
       } catch (e) {
-        console.error("Failed to load user state", e);
+        // Silently fail on storage corruption to keep console clean
+        console.debug("Resetting user state due to storage mismatch.");
       }
     }
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('scriptarc_user', JSON.stringify(user));
+    try {
+      localStorage.setItem('scriptarc_user', JSON.stringify(user));
+    } catch (e) {
+      console.debug("Failed to save state");
+    }
   }, [user]);
 
   const activeScript = user.scripts.find(s => s.id === activeScriptId);
